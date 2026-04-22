@@ -1,5 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
-
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -47,6 +45,6 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.Maf.Cache" Version="4.0.48" />
-        <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.63" />
+        <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.64" />
     </ItemGroup>
 </Project>
