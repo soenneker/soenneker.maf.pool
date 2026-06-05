@@ -9,10 +9,19 @@ namespace Soenneker.Maf.Pool.Abstract;
 /// </summary>
 public interface IMafPoolEntry
 {
+    /// <summary>
+    /// Gets rate limiter.
+    /// </summary>
     IMafRateLimiter RateLimiter { get; }
 
+    /// <summary>
+    /// Gets options.
+    /// </summary>
     MafOptions Options { get; }
 
+    /// <summary>
+    /// Gets key.
+    /// </summary>
     string Key { get; }
 
     /// <summary>
