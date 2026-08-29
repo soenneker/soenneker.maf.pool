@@ -44,6 +44,7 @@ public interface IMafPool
     /// <param name="entryKey">Unique key for this agent entry.</param>
     /// <param name="options"><see cref="MafOptions"/> must have <see cref="MafOptions.AgentFactory"/> set.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the add operation is complete.</returns>
     ValueTask Add(string poolId, string entryKey, MafOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -53,6 +54,7 @@ public interface IMafPool
     /// <param name="entryKey">Unique key for this agent entry.</param>
     /// <param name="entry">Pre-constructed <see cref="IMafPoolEntry"/>.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the add operation is complete.</returns>
     ValueTask Add(string poolId, string entryKey, IMafPoolEntry entry, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -70,12 +72,14 @@ public interface IMafPool
     /// </summary>
     /// <param name="poolId">Identifier for the sub-pool.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the Maf Pool has been cleared.</returns>
     ValueTask Clear(string poolId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Clears and removes every sub-pool (all poolIds) and clears the internal cache completely.
     /// </summary>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the Maf Pool has been cleared.</returns>
     ValueTask ClearAll(CancellationToken cancellationToken = default);
 
     /// <summary>

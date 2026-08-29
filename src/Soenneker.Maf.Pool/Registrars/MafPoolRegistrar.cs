@@ -14,6 +14,8 @@ public static class MafPoolRegistrar
     /// <summary>
     /// Adds <see cref="IMafCache"/> and <see cref="IMafPool"/> as singleton services.
     /// </summary>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddMafPoolAsSingleton(this IServiceCollection services)
     {
         services.TryAddSingleton<IMafCache, MafCache>();
@@ -25,6 +27,8 @@ public static class MafPoolRegistrar
     /// <summary>
     /// Adds <see cref="IMafCache"/> and <see cref="IMafPool"/> as scoped services.
     /// </summary>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddMafPoolAsScoped(this IServiceCollection services)
     {
         services.TryAddScoped<IMafCache, MafCache>();
