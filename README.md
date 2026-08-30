@@ -5,7 +5,7 @@
 
 # Soenneker.Maf.Pool
 
-Defines a pool of Microsoft Agent Framework `AIAgent` entries, organized by poolId. Allows registering, unregistering, clearing, and checking out an agent instance.
+Selects an available Microsoft Agent Framework `AIAgent` from named pools while enforcing per-entry request quotas.
 
 ## Install
 
@@ -13,17 +13,36 @@ Defines a pool of Microsoft Agent Framework `AIAgent` entries, organized by pool
 dotnet add package Soenneker.Maf.Pool
 ```
 
-## Quick start
+## Usage
 
 ```csharp
-using Soenneker.Maf.Pool.Registrars;
 using Microsoft.Extensions.DependencyInjection;
+using Soenneker.Maf.Dtos.Options;
+using Soenneker.Maf.Pool.Abstract;
+using Soenneker.Maf.Pool.Registrars;
 
-var services = new ServiceCollection();
-var result = services.AddMafPoolAsSingleton();
+services.AddMafPoolAsSingleton();
+
+IMafPool pool = serviceProvider.GetRequiredService<IMafPool>();
+
+await pool.Add("chat", "primary", new MafOptions
+{
+    ModelId = "my-model",
+    RequestsPerMinute = 60,
+    AgentFactory = static (options, cancellationToken) =>
+        CreateAgentAsync(options.ModelId!, cancellationToken)
+}, cancellationToken);
+
+(AIAgent? agent, IMafPoolEntry? entry) =
+    await pool.GetAvailable("chat", cancellationToken);
+
+if (agent is not null)
+{
+    // Use the selected agent. The request allowance was consumed by checkout.
+}
 ```
 
-Adds `IMafCache` and `IMafPool` as singleton services.
+Add multiple entries to a pool to provide fallback capacity. Entries are checked in registration order; an entry whose quota is exhausted is skipped until capacity becomes available.
 
 ## What you get
 
@@ -56,4 +75,8 @@ Adds `IMafCache` and `IMafPool` as singleton services.
 
 ## Practical notes
 
-- Cancellation stops pending work; it does not undo work that has already completed.
+- `GetAvailable()` waits when every entry is rate-limited. Always pass a cancellation token when an indefinite wait is undesirable.
+- A successful checkout consumes one request from the selected entry. The pool does not observe whether the eventual model request succeeds.
+- Pool ids isolate both registrations and cached agents, so the same entry key can be used in different pools.
+- `Clear(poolId)` affects only that pool. `ClearAll()` removes every pool and cached agent.
+- Singleton registration shares quotas and agents application-wide; scoped registration creates independent pools per scope.

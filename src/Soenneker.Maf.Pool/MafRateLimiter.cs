@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace Soenneker.Maf.Pool;
 
-/// <inheritdoc cref="IMafRateLimiter"/>
 public sealed class MafRateLimiter : IMafRateLimiter
 {
     private readonly ConcurrentQueue<DateTimeOffset> _secondWindow = new();
@@ -112,9 +111,9 @@ public sealed class MafRateLimiter : IMafRateLimiter
             window.TryDequeue(out _);
     }
 
-    private int GetTokenSum()
+    private long GetTokenSum()
     {
-        var total = 0;
+        long total = 0;
         foreach ((_, int tokens) in _tokenDayWindow)
             total += tokens;
         return total;

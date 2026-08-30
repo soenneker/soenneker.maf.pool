@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 namespace Soenneker.Maf.Pool;
 
-/// <inheritdoc cref="IMafPoolEntry"/>
 public sealed class MafPoolEntry : IMafPoolEntry
 {
     public IMafRateLimiter RateLimiter { get; }

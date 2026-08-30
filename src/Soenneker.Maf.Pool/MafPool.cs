@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace Soenneker.Maf.Pool;
 
-/// <inheritdoc cref="IMafPool"/>
 public sealed class MafPool : IMafPool
 {
     private readonly ConcurrentDictionary<string, SubPool> _subPools = new();
@@ -48,10 +47,10 @@ public sealed class MafPool : IMafPool
                 if (!await entry.IsAvailable(cancellationToken).NoSync())
                     continue;
 
-                if (!pool.Entries.TryGetValue(key, out IMafPoolEntry? stillLive))
+                if (!pool.Entries.TryGetValue(key, out IMafPoolEntry? stillLive) || !ReferenceEquals(stillLive, entry))
                     continue;
 
-                AIAgent agent = await _cache.Get(key, entry.Options, cancellationToken).NoSync();
+                AIAgent agent = await _cache.Get(GetCacheKey(poolId, key), entry.Options, cancellationToken).NoSync();
                 return (agent, entry);
             }
 
@@ -90,9 +89,9 @@ public sealed class MafPool : IMafPool
     {
         SubPool pool = _subPools.GetOrAdd(poolId, _ => new SubPool());
 
-        if (pool.Entries.TryAdd(entryKey, entry))
+        using (await pool.QueueLock.Lock(cancellationToken).NoSync())
         {
-            using (await pool.QueueLock.Lock(cancellationToken).NoSync())
+            if (pool.Entries.TryAdd(entryKey, entry))
             {
                 LinkedListNode<string> node = pool.OrderedKeys.AddLast(entryKey);
                 pool.NodeMap[entryKey] = node;
@@ -105,11 +104,11 @@ public sealed class MafPool : IMafPool
         if (!_subPools.TryGetValue(poolId, out SubPool? pool))
             return false;
 
-        if (!pool.Entries.TryRemove(entryKey, out _))
-            return false;
-
         using (await pool.QueueLock.Lock(cancellationToken).NoSync())
         {
+            if (!pool.Entries.TryRemove(entryKey, out _))
+                return false;
+
             if (pool.NodeMap.TryGetValue(entryKey, out LinkedListNode<string>? node))
             {
                 pool.OrderedKeys.Remove(node);
@@ -117,7 +116,7 @@ public sealed class MafPool : IMafPool
             }
         }
 
-        await _cache.Remove(entryKey, cancellationToken).NoSync();
+        await _cache.Remove(GetCacheKey(poolId, entryKey), cancellationToken).NoSync();
         return true;
     }
 
@@ -126,15 +125,17 @@ public sealed class MafPool : IMafPool
         if (!_subPools.TryRemove(poolId, out SubPool? pool))
             return;
 
-        pool.Entries.Clear();
-
+        List<string> keys;
         using (await pool.QueueLock.Lock(cancellationToken).NoSync())
         {
+            keys = [.. pool.Entries.Keys];
+            pool.Entries.Clear();
             pool.OrderedKeys = [];
             pool.NodeMap.Clear();
         }
 
-        await _cache.Clear(cancellationToken).NoSync();
+        foreach (string entryKey in keys)
+            await _cache.Remove(GetCacheKey(poolId, entryKey), cancellationToken).NoSync();
     }
 
     public async ValueTask ClearAll(CancellationToken cancellationToken = default)
@@ -151,5 +152,10 @@ public sealed class MafPool : IMafPool
             return false;
 
         return pool.Entries.TryGetValue(entryKey, out entry);
+    }
+
+    private static string GetCacheKey(string poolId, string entryKey)
+    {
+        return $"{poolId.Length}:{poolId}{entryKey}";
     }
 }
