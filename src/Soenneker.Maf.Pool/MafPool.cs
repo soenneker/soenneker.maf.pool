@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace Soenneker.Maf.Pool;
 
+/// <inheritdoc cref="IMafPool" />
 public sealed class MafPool : IMafPool
 {
     private readonly ConcurrentDictionary<string, SubPool> _subPools = new();

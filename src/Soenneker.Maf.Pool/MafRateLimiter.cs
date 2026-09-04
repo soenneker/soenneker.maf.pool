@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace Soenneker.Maf.Pool;
 
+/// <inheritdoc cref="IMafRateLimiter" />
 public sealed class MafRateLimiter : IMafRateLimiter
 {
     private readonly ConcurrentQueue<DateTimeOffset> _secondWindow = new();
