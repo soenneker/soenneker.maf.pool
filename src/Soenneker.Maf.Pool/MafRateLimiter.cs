@@ -3,7 +3,7 @@ using Soenneker.Extensions.ValueTask;
 using Soenneker.Maf.Dtos.Options;
 using Soenneker.Maf.Pool.Abstract;
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,10 +12,10 @@ namespace Soenneker.Maf.Pool;
 /// <inheritdoc cref="IMafRateLimiter" />
 public sealed class MafRateLimiter : IMafRateLimiter
 {
-    private readonly ConcurrentQueue<DateTimeOffset> _secondWindow = new();
-    private readonly ConcurrentQueue<DateTimeOffset> _minuteWindow = new();
-    private readonly ConcurrentQueue<DateTimeOffset> _dayWindow = new();
-    private readonly ConcurrentQueue<(DateTimeOffset Timestamp, int Tokens)> _tokenDayWindow = new();
+    private readonly Queue<DateTimeOffset> _secondWindow = new();
+    private readonly Queue<DateTimeOffset> _minuteWindow = new();
+    private readonly Queue<DateTimeOffset> _dayWindow = new();
+    private readonly Queue<(DateTimeOffset Timestamp, int Tokens)> _tokenDayWindow = new();
 
     private readonly int? _requestsPerSecond;
     private readonly int? _requestsPerMinute;
@@ -23,6 +23,7 @@ public sealed class MafRateLimiter : IMafRateLimiter
     private readonly int? _tokensPerDay;
 
     private readonly AsyncLock _lock = new();
+    private long _tokenSum;
 
     public MafRateLimiter(MafOptions options)
     {
@@ -70,12 +71,18 @@ public sealed class MafRateLimiter : IMafRateLimiter
 
             var ts = new DateTimeOffset(now.Ticks, TimeSpan.Zero);
 
-            _secondWindow.Enqueue(ts);
-            _minuteWindow.Enqueue(ts);
-            _dayWindow.Enqueue(ts);
+            if (_requestsPerSecond is not null)
+                _secondWindow.Enqueue(ts);
+            if (_requestsPerMinute is not null)
+                _minuteWindow.Enqueue(ts);
+            if (_requestsPerDay is not null)
+                _dayWindow.Enqueue(ts);
 
             if (_tokensPerDay is not null)
+            {
                 _tokenDayWindow.Enqueue((ts, tokens));
+                _tokenSum += tokens;
+            }
 
             return true;
         }
@@ -100,23 +107,20 @@ public sealed class MafRateLimiter : IMafRateLimiter
         }
     }
 
-    private static void CleanupWindow(ConcurrentQueue<DateTimeOffset> window, long cutoffTicks)
+    private static void CleanupWindow(Queue<DateTimeOffset> window, long cutoffTicks)
     {
         while (window.TryPeek(out DateTimeOffset ts) && ts.Ticks < cutoffTicks)
             window.TryDequeue(out _);
     }
 
-    private static void CleanupTokenWindow(ConcurrentQueue<(DateTimeOffset Timestamp, int Tokens)> window, long cutoffTicks)
+    private void CleanupTokenWindow(Queue<(DateTimeOffset Timestamp, int Tokens)> window, long cutoffTicks)
     {
         while (window.TryPeek(out (DateTimeOffset Timestamp, int Tokens) item) && item.Timestamp.Ticks < cutoffTicks)
-            window.TryDequeue(out _);
+        {
+            window.Dequeue();
+            _tokenSum -= item.Tokens;
+        }
     }
 
-    private long GetTokenSum()
-    {
-        long total = 0;
-        foreach ((_, int tokens) in _tokenDayWindow)
-            total += tokens;
-        return total;
-    }
+    private long GetTokenSum() => _tokenSum;
 }
