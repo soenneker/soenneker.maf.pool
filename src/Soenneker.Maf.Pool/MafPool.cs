@@ -7,12 +7,12 @@ using Soenneker.Utils.Delay;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Soenneker.Maf.Pool;
 
-/// <inheritdoc cref="IMafPool" />
 public sealed class MafPool : IMafPool
 {
     private readonly ConcurrentDictionary<string, SubPool> _subPools = new();
@@ -25,10 +25,12 @@ public sealed class MafPool : IMafPool
 
     public async ValueTask<(AIAgent? agent, IMafPoolEntry? entry)> GetAvailable(string poolId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SubPool pool = _subPools.GetOrAdd(poolId, _ => new SubPool());
 
-        while (!cancellationToken.IsCancellationRequested)
+        while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             List<(string Key, IMafPoolEntry Entry)> candidates;
 
             using (await pool.QueueLock.Lock(cancellationToken).NoSync())
@@ -57,8 +59,28 @@ public sealed class MafPool : IMafPool
 
             await DelayUtil.Delay(TimeSpan.FromMilliseconds(500), null, cancellationToken).NoSync();
         }
+    }
 
-        return (null, null);
+    public async ValueTask<(AIAgent? agent, IMafPoolEntry? entry)> GetAvailable(string poolId, TimeSpan waitTimeout,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(waitTimeout);
+
+        try
+        {
+            return await GetAvailable(poolId, timeout.Token).NoSync();
+        }
+        catch (OperationCanceledException exception) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            Dictionary<string, (int Second, int Minute, int Day)> quotas = await GetRemainingQuotas(poolId, cancellationToken).NoSync();
+            string remaining = quotas.Count == 0 ? "no registered entries" : string.Join("; ", quotas.Select(x =>
+                $"{x.Key}: second={x.Value.Second}, minute={x.Value.Minute}, day={x.Value.Day}"));
+            throw new TimeoutException(
+                $"Timed out after {waitTimeout.TotalSeconds} seconds waiting for an agent in MAF pool '{poolId}'. Remaining request quotas: {remaining}.",
+                exception);
+        }
     }
 
     public async ValueTask<Dictionary<string, (int Second, int Minute, int Day)>> GetRemainingQuotas(string poolId, CancellationToken cancellationToken = default)

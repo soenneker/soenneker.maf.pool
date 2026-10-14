@@ -1,4 +1,5 @@
 using Microsoft.Agents.AI;
+using System;
 using Soenneker.Maf.Dtos.Options;
 using System.Collections.Generic;
 using System.Threading;
@@ -20,10 +21,24 @@ public interface IMafPool
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> containing a tuple of:
-    /// - <see cref="AIAgent"/> instance (or null if cancelled)
+    /// - <see cref="AIAgent"/> instance
     /// - Corresponding <see cref="IMafPoolEntry"/> used to manage that agent.
     /// </returns>
+    /// <exception cref="OperationCanceledException">The caller cancelled the operation.</exception>
     ValueTask<(AIAgent? agent, IMafPoolEntry? entry)> GetAvailable(string poolId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Waits for an available agent with a timeout separate from caller cancellation.
+    /// </summary>
+    /// <param name="poolId">Identifier for the sub-pool.</param>
+    /// <param name="waitTimeout">Maximum wait, or <see cref="Timeout.InfiniteTimeSpan"/> to wait indefinitely.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The available agent and its pool entry.</returns>
+    /// <exception cref="TimeoutException">The wait expired. The message includes the pool and remaining request quotas.</exception>
+    /// <exception cref="OperationCanceledException">The caller cancelled the operation.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is outside the range supported by <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/>.</exception>
+    ValueTask<(AIAgent? agent, IMafPoolEntry? entry)> GetAvailable(string poolId, TimeSpan waitTimeout,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves the remaining usage quotas for every entry in the specified pool.
