@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <IsAotCompatible>true</IsAotCompatible>
         <Nullable>enable</Nullable>
         <Platforms>AnyCPU</Platforms>
@@ -9,7 +9,7 @@
 
     <PropertyGroup>
         <Description>A high-performance, thread-safe pool implementation for Microsoft Agent Framework agents with built-in rate limiting capabilities.</Description>
-        <Version Condition="'$(BUILD_VERSION)' == ''">4.0.0</Version>
+        <Version Condition="'$(BUILD_VERSION)' == ''">11.0.0</Version>
         <Version Condition="'$(BUILD_VERSION)' != ''">$(BUILD_VERSION)</Version>
         <AssemblyName>Soenneker.Maf.Pool</AssemblyName>
         <PackageId>Soenneker.Maf.Pool</PackageId>
@@ -46,6 +46,6 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.Maf.Cache" Version="4.0.172" />
-        <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.104" />
+        <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.105" />
     </ItemGroup>
 </Project>
