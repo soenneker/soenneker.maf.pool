@@ -46,7 +46,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Maf.Cache" Version="11.0.184" />
+        <PackageReference Include="Soenneker.Maf.Cache" Version="11.0.185" />
         <PackageReference Include="Soenneker.Utils.Delay" Version="11.0.108" />
     </ItemGroup>
 </Project>
